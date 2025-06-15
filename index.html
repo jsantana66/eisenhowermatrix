@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eisenhower Matrix - Task Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .add-task-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .add-task-form {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .add-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: #dee2e6;
+            margin: 0;
+        }
+
+        .quadrant {
+            background: white;
+            padding: 25px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .quadrant-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid;
+        }
+
+        .quadrant-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .quadrant-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .do {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .do .quadrant-header {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .decide {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .decide .quadrant-header {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .delegate {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .delegate .quadrant-header {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .delete {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .delete .quadrant-header {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            margin-bottom: 12px;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .task-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .task-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .task-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .complete-btn {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: rgba(46, 204, 113, 0.5);
+        }
+
+        .delete-btn {
+            background: rgba(231, 76, 60, 0.3);
+            border-color: rgba(231, 76, 60, 0.5);
+        }
+
+        .task-count {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            opacity: 0.6;
+            font-style: italic;
+            margin-top: 20px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .matrix {
+                grid-template-columns: 1fr;
+            }
+            
+            .add-task-form {
+                flex-direction: column;
+            }
+            
+            .form-group {
+                min-width: 100%;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>The Eisenhower Matrix</h1>
+            <p>"What is important is seldom urgent and what is urgent is seldom important." - Dwight Eisenhower</p>
+        </div>
+
+        <div class="add-task-section">
+            <form class="add-task-form" id="addTaskForm">
+                <div class="form-group">
+                    <label for="taskInput">Task Description</label>
+                    <input type="text" id="taskInput" placeholder="Enter your task..." required>
+                </div>
+                <div class="form-group">
+                    <label for="quadrantSelect">Quadrant</label>
+                    <select id="quadrantSelect" required>
+                        <option value="">Select quadrant...</option>
+                        <option value="do">Do (Urgent & Important)</option>
+                        <option value="decide">Decide (Not Urgent & Important)</option>
+                        <option value="delegate">Delegate (Urgent & Not Important)</option>
+                        <option value="delete">Delete (Not Urgent & Not Important)</option>
+                    </select>
+                </div>
+                <button type="submit" class="add-btn">Add Task</button>
+            </form>
+        </div>
+
+        <div class="matrix">
+            <div class="quadrant do" id="do">
+                <div class="task-count" id="doCount">0</div>
+                <div class="quadrant-header">
+                    <div class="quadrant-title">DO</div>
+                    <div class="quadrant-subtitle">Urgent & Important</div>
+                </div>
+                <ul class="task-list" id="doList">
+                </ul>
+                <div class="empty-state" id="doEmpty">No tasks yet. Add urgent and important tasks here.</div>
+            </div>
+
+            <div class="quadrant decide" id="decide">
+                <div class="task-count" id="decideCount">0</div>
+                <div class="quadrant-header">
+                    <div class="quadrant-title">DECIDE</div>
+                    <div class="quadrant-subtitle">Not Urgent & Important</div>
+                </div>
+                <ul class="task-list" id="decideList">
+                </ul>
+                <div class="empty-state" id="decideEmpty">No tasks yet. Schedule important but not urgent tasks here.</div>
+            </div>
+
+            <div class="quadrant delegate" id="delegate">
+                <div class="task-count" id="delegateCount">0</div>
+                <div class="quadrant-header">
+                    <div class="quadrant-title">DELEGATE</div>
+                    <div class="quadrant-subtitle">Urgent & Not Important</div>
+                </div>
+                <ul class="task-list" id="delegateList">
+                </ul>
+                <div class="empty-state" id="delegateEmpty">No tasks yet. Add urgent but less important tasks here.</div>
+            </div>
+
+            <div class="quadrant delete" id="delete">
+                <div class="task-count" id="deleteCount">0</div>
+                <div class="quadrant-header">
+                    <div class="quadrant-title">DELETE</div>
+                    <div class="quadrant-subtitle">Not Urgent & Not Important</div>
+                </div>
+                <ul class="task-list" id="deleteList">
+                </ul>
+                <div class="empty-state" id="deleteEmpty">No tasks yet. Add time-wasting activities to eliminate.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class EisenhowerMatrix {
+            constructor() {
+                this.tasks = {
+                    do: [],
+                    decide: [],
+                    delegate: [],
+                    delete: []
+                };
+                this.taskCounter = 0;
+                this.init();
+            }
+
+            init() {
+                this.loadTasks();
+                this.bindEvents();
+                this.render();
+            }
+
+            bindEvents() {
+                document.getElementById('addTaskForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addTask();
+                });
+            }
+
+            addTask() {
+                const taskInput = document.getElementById('taskInput');
+                const quadrantSelect = document.getElementById('quadrantSelect');
+                
+                const taskText = taskInput.value.trim();
+                const quadrant = quadrantSelect.value;
+
+                if (!taskText || !quadrant) return;
+
+                const task = {
+                    id: ++this.taskCounter,
+                    text: taskText,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+
+                this.tasks[quadrant].push(task);
+                this.saveTasks();
+                this.render();
+
+                // Reset form
+                taskInput.value = '';
+                quadrantSelect.value = '';
+                taskInput.focus();
+            }
+
+            completeTask(quadrant, taskId) {
+                const task = this.tasks[quadrant].find(t => t.id === taskId);
+                if (task) {
+                    task.completed = !task.completed;
+                    this.saveTasks();
+                    this.render();
+                }
+            }
+
+            deleteTask(quadrant, taskId) {
+                this.tasks[quadrant] = this.tasks[quadrant].filter(t => t.id !== taskId);
+                this.saveTasks();
+                this.render();
+            }
+
+            render() {
+                ['do', 'decide', 'delegate', 'delete'].forEach(quadrant => {
+                    this.renderQuadrant(quadrant);
+                });
+            }
+
+            renderQuadrant(quadrant) {
+                const list = document.getElementById(`${quadrant}List`);
+                const count = document.getElementById(`${quadrant}Count`);
+                const empty = document.getElementById(`${quadrant}Empty`);
+                const tasks = this.tasks[quadrant];
+
+                // Update count
+                count.textContent = tasks.length;
+
+                // Clear list
+                list.innerHTML = '';
+
+                if (tasks.length === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                empty.style.display = 'none';
+
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                    
+                    li.innerHTML = `
+                        <div class="task-content">
+                            <div class="task-text">${this.escapeHtml(task.text)}</div>
+                            <div class="task-actions">
+                                <button class="task-btn complete-btn" onclick="matrix.completeTask('${quadrant}', ${task.id})">
+                                    ${task.completed ? 'Undo' : 'Done'}
+                                </button>
+                                <button class="task-btn delete-btn" onclick="matrix.deleteTask('${quadrant}', ${task.id})">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    list.appendChild(li);
+                });
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            saveTasks() {
+                const data = {
+                    tasks: this.tasks,
+                    taskCounter: this.taskCounter
+                };
+                // Store in memory for this session
+                this.savedData = data;
+            }
+
+            loadTasks() {
+                // Load from memory if available
+                if (this.savedData) {
+                    this.tasks = this.savedData.tasks || { do: [], decide: [], delegate: [], delete: [] };
+                    this.taskCounter = this.savedData.taskCounter || 0;
+                }
+            }
+        }
+
+        // Initialize the app
+        const matrix = new EisenhowerMatrix();
+
+        // Focus on task input when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('taskInput').focus();
+        });
+    </script>
+</body>
+</html>
