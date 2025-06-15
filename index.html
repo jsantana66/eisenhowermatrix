@@ -51,6 +51,140 @@
             border-bottom: 1px solid #e9ecef;
         }
 
+        .controls-section {
+            padding: 20px 30px;
+            background: #f1f3f4;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .archive-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .archive-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .view-archive-btn {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .archive-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: none;
+        }
+
+        .archive-section.visible {
+            display: block;
+        }
+
+        .archive-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .archive-header h2 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+        }
+
+        .archive-list {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .archive-item {
+            background: white;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .archive-item-content {
+            flex: 1;
+        }
+
+        .archive-item-text {
+            font-weight: 500;
+            color: #2c3e50;
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+
+        .archive-item-meta {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .archive-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .restore-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .permanent-delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .storage-info {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
         .add-task-form {
             display: flex;
             gap: 15px;
@@ -314,6 +448,27 @@
             </form>
         </div>
 
+        <div class="controls-section">
+            <div class="archive-controls">
+                <button class="control-btn archive-btn" id="archiveCompletedBtn">Archive Completed Tasks</button>
+                <button class="control-btn view-archive-btn" id="viewArchiveBtn">View Archive</button>
+                <button class="control-btn clear-btn" id="clearAllBtn">Clear All Tasks</button>
+            </div>
+            <div class="storage-info">
+                Data is automatically saved to your browser
+            </div>
+        </div>
+
+        <div class="archive-section" id="archiveSection">
+            <div class="archive-header">
+                <h2>Archived Tasks</h2>
+                <button class="control-btn" id="hideArchiveBtn">Hide Archive</button>
+            </div>
+            <ul class="archive-list" id="archiveList">
+            </ul>
+            <div class="empty-state" id="archiveEmpty">No archived tasks yet.</div>
+        </div>
+
         <div class="matrix">
             <div class="quadrant do" id="do">
                 <div class="task-count" id="doCount">0</div>
@@ -370,6 +525,7 @@
                     delegate: [],
                     delete: []
                 };
+                this.archivedTasks = [];
                 this.taskCounter = 0;
                 this.init();
             }
@@ -378,12 +534,29 @@
                 this.loadTasks();
                 this.bindEvents();
                 this.render();
+                this.renderArchive();
             }
 
             bindEvents() {
                 document.getElementById('addTaskForm').addEventListener('submit', (e) => {
                     e.preventDefault();
                     this.addTask();
+                });
+
+                document.getElementById('archiveCompletedBtn').addEventListener('click', () => {
+                    this.archiveCompletedTasks();
+                });
+
+                document.getElementById('viewArchiveBtn').addEventListener('click', () => {
+                    this.toggleArchive();
+                });
+
+                document.getElementById('hideArchiveBtn').addEventListener('click', () => {
+                    this.toggleArchive();
+                });
+
+                document.getElementById('clearAllBtn').addEventListener('click', () => {
+                    this.clearAllTasks();
                 });
             }
 
@@ -426,6 +599,141 @@
                 this.tasks[quadrant] = this.tasks[quadrant].filter(t => t.id !== taskId);
                 this.saveTasks();
                 this.render();
+            }
+
+            archiveCompletedTasks() {
+                let archivedCount = 0;
+                
+                ['do', 'decide', 'delegate', 'delete'].forEach(quadrant => {
+                    const completedTasks = this.tasks[quadrant].filter(task => task.completed);
+                    completedTasks.forEach(task => {
+                        task.archivedAt = new Date().toISOString();
+                        task.originalQuadrant = quadrant;
+                        this.archivedTasks.push(task);
+                        archivedCount++;
+                    });
+                    this.tasks[quadrant] = this.tasks[quadrant].filter(task => !task.completed);
+                });
+
+                if (archivedCount > 0) {
+                    this.saveTasks();
+                    this.render();
+                    this.renderArchive();
+                    alert(`${archivedCount} completed task(s) archived successfully!`);
+                } else {
+                    alert('No completed tasks to archive.');
+                }
+            }
+
+            restoreTask(taskId) {
+                const archivedTask = this.archivedTasks.find(t => t.id === taskId);
+                if (archivedTask) {
+                    // Remove from archive
+                    this.archivedTasks = this.archivedTasks.filter(t => t.id !== taskId);
+                    
+                    // Reset task state and add back to original quadrant
+                    archivedTask.completed = false;
+                    delete archivedTask.archivedAt;
+                    const originalQuadrant = archivedTask.originalQuadrant;
+                    delete archivedTask.originalQuadrant;
+                    
+                    this.tasks[originalQuadrant].push(archivedTask);
+                    
+                    this.saveTasks();
+                    this.render();
+                    this.renderArchive();
+                }
+            }
+
+            permanentlyDeleteTask(taskId) {
+                if (confirm('Are you sure you want to permanently delete this task? This cannot be undone.')) {
+                    this.archivedTasks = this.archivedTasks.filter(t => t.id !== taskId);
+                    this.saveTasks();
+                    this.renderArchive();
+                }
+            }
+
+            clearAllTasks() {
+                if (confirm('Are you sure you want to clear all tasks? This will remove all active tasks but keep archived ones.')) {
+                    this.tasks = {
+                        do: [],
+                        decide: [],
+                        delegate: [],
+                        delete: []
+                    };
+                    this.saveTasks();
+                    this.render();
+                }
+            }
+
+            toggleArchive() {
+                const archiveSection = document.getElementById('archiveSection');
+                const viewBtn = document.getElementById('viewArchiveBtn');
+                
+                if (archiveSection.classList.contains('visible')) {
+                    archiveSection.classList.remove('visible');
+                    viewBtn.textContent = 'View Archive';
+                } else {
+                    archiveSection.classList.add('visible');
+                    viewBtn.textContent = 'Hide Archive';
+                    this.renderArchive();
+                }
+            }
+
+            renderArchive() {
+                const archiveList = document.getElementById('archiveList');
+                const archiveEmpty = document.getElementById('archiveEmpty');
+
+                archiveList.innerHTML = '';
+
+                if (this.archivedTasks.length === 0) {
+                    archiveEmpty.style.display = 'block';
+                    return;
+                }
+
+                archiveEmpty.style.display = 'none';
+
+                // Sort by archived date (newest first)
+                const sortedTasks = [...this.archivedTasks].sort((a, b) => 
+                    new Date(b.archivedAt) - new Date(a.archivedAt)
+                );
+
+                sortedTasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = 'archive-item';
+                    
+                    const archivedDate = new Date(task.archivedAt).toLocaleDateString();
+                    const quadrantName = this.getQuadrantDisplayName(task.originalQuadrant);
+                    
+                    li.innerHTML = `
+                        <div class="archive-item-content">
+                            <div class="archive-item-text">${this.escapeHtml(task.text)}</div>
+                            <div class="archive-item-meta">
+                                Archived: ${archivedDate} | From: ${quadrantName}
+                            </div>
+                        </div>
+                        <div class="archive-item-actions">
+                            <button class="restore-btn" onclick="matrix.restoreTask(${task.id})">
+                                Restore
+                            </button>
+                            <button class="permanent-delete-btn" onclick="matrix.permanentlyDeleteTask(${task.id})">
+                                Delete
+                            </button>
+                        </div>
+                    `;
+
+                    archiveList.appendChild(li);
+                });
+            }
+
+            getQuadrantDisplayName(quadrant) {
+                const names = {
+                    do: 'Do',
+                    decide: 'Decide',
+                    delegate: 'Delegate',
+                    delete: 'Delete'
+                };
+                return names[quadrant] || quadrant;
             }
 
             render() {
@@ -484,17 +792,43 @@
             saveTasks() {
                 const data = {
                     tasks: this.tasks,
-                    taskCounter: this.taskCounter
+                    archivedTasks: this.archivedTasks,
+                    taskCounter: this.taskCounter,
+                    lastSaved: new Date().toISOString()
                 };
-                // Store in memory for this session
+                
+                // In a real deployment, this will use localStorage
+                // For now, store in memory for this session
                 this.savedData = data;
+                
+                // When deployed, uncomment these lines to enable persistent storage:
+                // try {
+                //     localStorage.setItem('eisenhowerMatrix', JSON.stringify(data));
+                // } catch (e) {
+                //     console.warn('Could not save to localStorage:', e);
+                // }
             }
 
             loadTasks() {
-                // Load from memory if available
-                if (this.savedData) {
-                    this.tasks = this.savedData.tasks || { do: [], decide: [], delegate: [], delete: [] };
-                    this.taskCounter = this.savedData.taskCounter || 0;
+                try {
+                    // When deployed, uncomment these lines to enable persistent storage:
+                    // const saved = localStorage.getItem('eisenhowerMatrix');
+                    // if (saved) {
+                    //     const data = JSON.parse(saved);
+                    //     this.tasks = data.tasks || { do: [], decide: [], delegate: [], delete: [] };
+                    //     this.archivedTasks = data.archivedTasks || [];
+                    //     this.taskCounter = data.taskCounter || 0;
+                    //     return;
+                    // }
+                    
+                    // Load from memory if available (for current session)
+                    if (this.savedData) {
+                        this.tasks = this.savedData.tasks || { do: [], decide: [], delegate: [], delete: [] };
+                        this.archivedTasks = this.savedData.archivedTasks || [];
+                        this.taskCounter = this.savedData.taskCounter || 0;
+                    }
+                } catch (e) {
+                    console.warn('Could not load from storage:', e);
                 }
             }
         }
